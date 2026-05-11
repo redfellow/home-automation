@@ -1,0 +1,6 @@
+**/env.h
+.DS_Store
+.pio/
+.vscode/
+
+ruuvi_state.log
