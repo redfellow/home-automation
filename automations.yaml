@@ -1,0 +1,210 @@
+- id: '1778024669931'
+  alias: Sleep PC when phone wireless charging at home, at night, if PC is idle
+  triggers:
+  - type: plugged_in
+    device_id: 1a6e47ced5d18880da2c73a35deb46bb
+    entity_id: 41a700d739b91e836da86f3c602039f7
+    domain: binary_sensor
+    trigger: device
+  conditions:
+  - condition: state
+    entity_id: sensor.galaxy_z_fold_5_charger_type
+    state: wireless
+  - condition: template
+    value_template: '{% set t = states.sensor.vermillion_lastactive.state %} {% set
+      last = as_datetime(t) if t not in [''unknown'', ''unavailable'', None] else
+      none %} {{ last is not none and (now() - last).total_seconds() > 300 }}
+
+      '
+  - condition: device
+    device_id: 1a6e47ced5d18880da2c73a35deb46bb
+    domain: device_tracker
+    entity_id: 3d0a1b90402f76d22c71d365dd46b835
+    type: is_home
+  - condition: time
+    after: '22:00:00'
+    before: 09:00:00
+  - condition: device
+    device_id: 148ad658091a1da797061323039ff3c2
+    domain: media_player
+    entity_id: 0119ff1e7080dc0a60983e99004fb41f
+    type: is_off
+  actions:
+  - action: light.turn_off
+    metadata: {}
+    target:
+      entity_id: light.flat
+    data:
+      transition: 10
+  - device_id: cd36bf3906ddc1f348aec7a304e7b336
+    domain: button
+    entity_id: 39b8daab70f549577e68fcaeb8fc1096
+    type: press
+  mode: single
+- id: '1778333671916'
+  alias: Put idle PC to sleep based on Spot-price
+  description: ''
+  triggers:
+  - alias: Every 5 minutes
+    trigger: time_pattern
+    minutes: /10
+  conditions:
+  - condition: numeric_state
+    entity_id: sensor.vermillion_active_clients
+    below: 1
+    alias: Jellyfin is not streaming media
+  - condition: template
+    value_template: '{% set t = states.sensor.vermillion_lastactive.state %}     {%
+      set last = as_datetime(t) if t not in [''unknown'', ''unavailable'', None] else
+      none %}           {% set timeout2 = float(15) %}    {% set timeout = states(''sensor.desktop_pc_sleep_timeout_seconds'')
+      | float(0) %}        {{ last is not none and (now() - last).total_seconds()
+      > timeout }}
+
+      '
+    alias: PC has been idle longer than Spot price based threshold allows
+  actions:
+  - alias: Blink 3 Hue lights briefly to indicate PC is about to sleep
+    sequence:
+    - action: scene.create
+      alias: Snapshot how lights are set up right now
+      data:
+        scene_id: pc_sleep_warning_restore
+        snapshot_entities:
+        - light.tv_taso
+        - light.olkkarinkulma
+        - light.sangynpaaty
+    - action: light.turn_on
+      alias: Blink lights step 1
+      target:
+        entity_id:
+        - light.tv_taso
+        - light.olkkarinkulma
+        - light.sangynpaaty
+      data:
+        rgb_color:
+        - 40
+        - 40
+        - 255
+        brightness_pct: 0
+    - delay:
+        milliseconds: 500
+    - action: light.turn_on
+      alias: Blink lights step 1
+      target:
+        entity_id:
+        - light.tv_taso
+        - light.olkkarinkulma
+        - light.sangynpaaty
+      data:
+        rgb_color:
+        - 40
+        - 40
+        - 255
+        brightness_pct: 100
+    - delay:
+        milliseconds: 500
+    - action: light.turn_on
+      alias: Blink lights step 1
+      target:
+        entity_id:
+        - light.tv_taso
+        - light.olkkarinkulma
+        - light.sangynpaaty
+      data:
+        rgb_color:
+        - 40
+        - 40
+        - 255
+        brightness_pct: 0
+    - delay:
+        milliseconds: 500
+    - action: scene.turn_on
+      alias: Restore snapshotted lights to how they were
+      target:
+        entity_id: scene.pc_sleep_warning_restore
+  - alias: Wait for a 10 minute grace period
+    delay:
+      hours: 0
+      minutes: 5
+      seconds: 0
+      milliseconds: 0
+  - condition: numeric_state
+    entity_id: sensor.vermillion_active_clients
+    below: 1
+    alias: Test if Jellyfin is still not streaming media
+  - condition: template
+    value_template: '{% set t = states.sensor.vermillion_lastactive.state %}     {%
+      set last = as_datetime(t) if t not in [''unknown'', ''unavailable'', None] else
+      none %}           {% set timeout2 = float(15) %}    {% set timeout = states(''sensor.desktop_pc_sleep_timeout_seconds'')
+      | float(0) %}        {{ last is not none and (now() - last).total_seconds()
+      > timeout }}
+
+      '
+    alias: Test if PC is still idle
+  - device_id: cd36bf3906ddc1f348aec7a304e7b336
+    domain: button
+    entity_id: 39b8daab70f549577e68fcaeb8fc1096
+    type: press
+  mode: restart
+- id: pc_resume_timestamp
+  alias: PC Resume Timestamp
+  description: ''
+  triggers:
+  - entity_id: sensor.my_pc_lastsystemstatechange
+    to: resume
+    trigger: state
+  actions:
+  - target:
+      entity_id: input_datetime.pc_last_resume
+    data:
+      datetime: '{{ now().isoformat() }}'
+    action: input_datetime.set_datetime
+  mode: single
+- id: pc_resume_timestamp
+  alias: PC Resume Timestamp
+  triggers:
+  - entity_id:
+    - sensor.vermillion_lastsystemstatechange
+    to:
+    - resume
+    trigger: state
+  actions:
+  - device_id: cd36bf3906ddc1f348aec7a304e7b336
+    domain: button
+    entity_id: a4f82ae17ead892472879891c3253edb
+    type: press
+  mode: single
+- id: '1778527653901'
+  alias: PC Resume Timestamp
+  description: ''
+  triggers:
+  - entity_id: sensor.vermillion_lastsystemstatechange
+    trigger: state
+    alias: When Desktop PC system state changes
+  conditions: []
+  actions:
+  - delay:
+      seconds: 5
+  - target:
+      entity_id: button.vermillion_simulatekeypress
+    action: button.press
+    data: {}
+  mode: single
+- id: '1778528642657'
+  alias: Reset "Last active" if Jellyfin is streaming media
+  description: ''
+  triggers:
+  - alias: When Jellyfin active client state changes
+    entity_id:
+    - sensor.vermillion_active_clients
+    trigger: state
+  conditions:
+  - condition: numeric_state
+    entity_id: sensor.vermillion_active_clients
+    above: 0
+  actions:
+  - target:
+      entity_id: button.vermillion_simulatekeypress
+    action: button.press
+    data: {}
+  mode: single
