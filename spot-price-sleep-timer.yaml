@@ -1,0 +1,31 @@
+template:
+  - sensor:
+      # =========================
+      # 1. NUMERIC (for automations)
+      # =========================
+      - name: "Desktop PC Sleep Timeout Seconds"
+        unit_of_measurement: "s"
+        state: >
+          {% set price = states('sensor.shf_electricity_price_now') | float(0) %}
+
+          {% if price <= 5 %}
+            {{ 2 * 3600 }}
+          {% elif price < 10 %}
+            {{ 3600 }}
+          {% elif price < 15 %}
+            {{ 1800 }}
+          {% else %}
+            {{ 900 }}
+          {% endif %}
+
+      # =========================
+      # 2. DISPLAY (for dashboard)
+      # =========================
+      - name: "Desktop PC Sleep Timeout"
+        state: >
+          {% set seconds = states('sensor.desktop_pc_sleep_timeout_seconds') | int(0) %}
+
+          {% set hours = (seconds // 3600) | int %}
+          {% set minutes = ((seconds % 3600) // 60) | int %}
+
+          {{ hours }}h {{ minutes }}m
